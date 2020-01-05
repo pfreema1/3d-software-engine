@@ -1,0 +1,14 @@
+{
+  "name": "3d-software-engine",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "server": "http-server -c-1 -p 8081"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "http-server": "^0.12.0"
+  }
+}
