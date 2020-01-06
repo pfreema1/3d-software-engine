@@ -41,9 +41,9 @@ class Device {
         /*
         The transformed coordinates will be based on coordinate system that starts on the center of the screen.  But drawing on screen normally starts from top left.  We then need to transform them again to have x:0 and y:0 on top left
         */
-        // debugger;
         const x = point.x * this.workingWidth + this.workingWidth / 2.0 >> 0;
         const y = -point.y * this.workingHeight + this.workingHeight / 2.0 >> 0;
+
         return (new BABYLON.Vector2(x, y));
     }
 
@@ -52,6 +52,41 @@ class Device {
         if (point.x >= 0 && point.y >= 0 && point.x < this.workingWidth && point.y < this.workingHeight) {
             // drawing a yellow point
             this.putPixel(point.x, point.y, new BABYLON.Color4(1, 1, 0, 1));
+        }
+    }
+
+    drawLine(point0, point1) {
+        const dist = point1.subtract(point0).length();
+
+        if (dist < 2) {
+            return;
+        }
+
+        // find middle point between first and second point
+        const middlePoint = point0.add((point1.subtract(point0)).scale(0.5));
+        this.drawPoint(middlePoint);
+
+        // recursively draw middle point between first -> middle point and middle -> second point
+        this.drawLine(point0, middlePoint);
+        this.drawLine(middlePoint, point1);
+    }
+
+    drawBline(point0, point1) {
+        let x0 = point0.x >> 0;
+        let y0 = point0.y >> 0;
+        const x1 = point1.x >> 0;
+        const y1 = point1.y >> 0;
+        const dx = Math.abs(x1 - x0);
+        const dy = Math.abs(y1 - y0);
+        const sx = (x0 < x1) ? 1 : -1;
+        const sy = (y0 < y1) ? 1 : -1;
+        let err = dx - dy;
+        while (true) {
+            this.drawPoint(new BABYLON.Vector2(x0, y0));
+            if ((x0 == x1) && (y0 == y1)) break;
+            const e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; x0 += sx; }
+            if (e2 < dx) { err += dx; y0 += sy; }
         }
     }
 
@@ -67,11 +102,19 @@ class Device {
 
             const transformMatrix = worldMatrix.multiply(viewMatrix).multiply(projectionMatrix);
 
-            for (let indexVertices = 0; indexVertices < cMesh.vertices.length; indexVertices++) {
-                // first, project the 3D coordinates into the 2D space
-                const projectedPoint = this.project(cMesh.vertices[indexVertices], transformMatrix);
-                // then we draw on screen
-                this.drawPoint(projectedPoint);
+            for (let indexFaces = 0; indexFaces < cMesh.faces.length; indexFaces++) {
+                const currentFace = cMesh.faces[indexFaces];
+                const vertexA = cMesh.vertices[currentFace.A];
+                const vertexB = cMesh.vertices[currentFace.B];
+                const vertexC = cMesh.vertices[currentFace.C];
+
+                const pixelA = this.project(vertexA, transformMatrix);
+                const pixelB = this.project(vertexB, transformMatrix);
+                const pixelC = this.project(vertexC, transformMatrix);
+
+                this.drawBline(pixelA, pixelB);
+                this.drawBline(pixelB, pixelC);
+                this.drawBline(pixelC, pixelA);
             }
         }
     }
